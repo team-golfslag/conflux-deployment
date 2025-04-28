@@ -1,0 +1,82 @@
+networks:
+  db_network:
+  proxy_network:
+
+services:
+  nginx-proxy:
+      image: nginxproxy/nginx-proxy
+      restart: always
+      volumes:
+          - html:/usr/share/nginx/html
+          - certs:/etc/nginx/certs:ro
+          - /var/run/docker.sock:/tmp/docker.sock:ro
+          - ./proxy_buffers.conf:/etc/nginx/conf.d/proxy_buffers.conf:ro
+      networks:
+        - proxy_network  # Attach to proxy network
+      ports:
+          - "80:80"
+          - "443:443"
+
+  nginx-proxy-acme:
+      image: nginxproxy/acme-companion
+      restart: always
+      volumes_from:
+          - nginx-proxy
+      volumes:
+          - certs:/etc/nginx/certs:rw
+          - acme:/etc/acme.sh
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+      networks:
+        - proxy_network  # Attach to proxy network
+      environment:
+          DEFAULT_EMAIL: <EMAIL_ADDRESS>
+
+  postgres:
+      image: postgres:17.3
+      restart: always
+      networks:
+        - db_network
+      environment:
+          POSTGRES_USER: <DB_USER>
+          POSTGRES_PASSWORD: <DB_PASSWORD>
+          POSTGRES_DB: <DB_NAME>
+      healthcheck:
+          test: [ "CMD", "pg_isready", "-q", "-d", "<DB_NAME>", "-U", "<DB_USER>" ]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+      ports:
+          - "5432:5432"
+
+  conflux-web:
+      image: conflux-web:latest
+      restart: always
+      networks:
+        - proxy_network  # Attach to proxy network
+      environment:
+          VIRTUAL_HOST: <DOMAIN>
+          LETSENCRYPT_HOST: <DOMAIN>
+
+  conflux-backend:
+      image: conflux-backend:latest
+      restart: always
+      networks:
+        - proxy_network  # Attach to proxy network
+        - db_network     # Attach to database network
+      environment:
+          VIRTUAL_HOST: <API_DOMAIN>
+          LETSENCRYPT_HOST: <API_DOMAIN>
+          DB_HOST: postgres
+          DB_NAME: <DB_NAME>
+          DB_USER: <DB_USER>
+          DB_PASSWORD: <DB_PASSWORD>
+          SRAM_CLIENT_SECRET: <SRAM_CLIENT_SECRET>
+          SRAM_SCIM_SECRET: <SRAM_SCIM_SECRET>
+      depends_on:
+          postgres:
+              condition: service_healthy
+
+volumes:
+    html:
+    certs:
+    acme:
