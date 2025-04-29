@@ -72,6 +72,7 @@ services:
           DB_PASSWORD: <DB_PASSWORD>
           SRAM_CLIENT_SECRET: <SRAM_CLIENT_SECRET>
           SRAM_SCIM_SECRET: <SRAM_SCIM_SECRET>
+          ORCID_CLIENT_SECRET: <ORCID_CLIENT_SECRET>
       depends_on:
           postgres:
               condition: service_healthy

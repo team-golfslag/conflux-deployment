@@ -74,7 +74,8 @@ Edit the docker-compose.yml file to replace all placeholder values:
 - `<DOMAIN>`: Domain name for the web frontend (e.g., app.example.com)
 - `<API_DOMAIN>`: Domain name for the backend API (e.g., api.example.com)
 - `<SRAM_CLIENT_SECRET>`: Authentication secret for SRAM client
-- `<SRAM_SCIM_SECRET>`: Authentication secret for SRAM SCIM
+- `<SRAM_SCIM_SECRET>`: Authentication secret for SRAM SCIM client
+- `<ORCID_CLIENT_SECRET>`: Authentication secret for ORCID client
 
 ### 5. Start the Services
 
