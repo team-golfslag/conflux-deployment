@@ -11,6 +11,7 @@ services:
           - certs:/etc/nginx/certs:ro
           - /var/run/docker.sock:/tmp/docker.sock:ro
           - ./proxy_buffers.conf:/etc/nginx/conf.d/proxy_buffers.conf:ro
+          - ./conflux_proxy.conf:/etc/nginx/location.d/default.conf:ro
       networks:
         - proxy_network  # Attach to proxy network
       ports:
