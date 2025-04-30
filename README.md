@@ -27,7 +27,58 @@ git clone https://github.com/your-organization/conflux-deployment.git
 cd conflux-deployment
 ```
 
-### 2. Build Docker Images
+### 2. Configure Backend Settings
+
+Before building the Docker images, you need to configure the backend settings:
+
+1. Navigate to the backend repository and edit the `Conflux.API/appsettings.json` file:
+
+```bash
+cd ../Conflux
+# Edit the file with your preferred editor
+nano Conflux.API/appsettings.json
+```
+
+2. Update the following important settings:
+
+```json
+{
+  "Authentication": {
+    "SRAM": {
+      "ClientId": "YOUR_SRAM_CLIENT_ID",
+      "RedirectUri": "https://<API_DOMAIN>/login/redirect",
+      "AllowedRedirectUris": [
+        "https://<WEB_UI_DOMAIN>/dashboard"
+      ]
+    },
+    "Orcid": {
+      "ClientId": "YOUR_ORCID_CLIENT_ID",
+      "RedirectUri": "https://<API_DOMAIN>/orcid/redirect", 
+      "AllowedRedirectUris": [
+        "https://<WEB_UI_DOMAIN>/profile"
+      ]
+    }
+  },
+  "Cors": {
+    "AllowedOrigins": [
+      "https://<WEB_UI_DOMAIN>"
+    ]
+  },
+  "FeatureFlags": {
+    "Swagger": false,
+    "SeedDatabase": false,
+    "DatabaseConnection": true,
+    "SRAMAuthentication": true,
+    "OrcidAuthentication": true,
+    "ReverseProxy": true,
+    "HttpsRedirect": true
+  }
+}
+```
+
+Replace all `<WEB_UI_DOMAIN>` and `<API_DOMAIN>` placeholders with your actual domain names. The client IDs should match your registered applications with SRAM and ORCID.
+
+### 3. Build Docker Images
 
 You have two options for building the Docker images:
 
@@ -51,7 +102,7 @@ If you prefer automated builds:
 2. Configure GitHub Actions or other CI/CD pipeline to build and publish the images
 3. Update the docker-compose.yml to use your published image names and tags
 
-### 3. Configure Frontend Environment Variables
+### 4. Configure Frontend Environment Variables
 
 Before building the frontend image, you must update the environment variables in `.env.production` file:
 
@@ -63,7 +114,7 @@ VITE_WEBUI_URL=https://<WEBUI_DOMAIN>
 
 Replace all placeholder values with your actual configuration.
 
-### 4. Configure Deployment Environment
+### 5. Configure Deployment Environment
 
 Edit the docker-compose.yml file to replace all placeholder values:
 
@@ -77,7 +128,7 @@ Edit the docker-compose.yml file to replace all placeholder values:
 - `<SRAM_SCIM_SECRET>`: Authentication secret for SRAM SCIM client
 - `<ORCID_CLIENT_SECRET>`: Authentication secret for ORCID client
 
-### 5. Start the Services
+### 6. Start the Services
 
 ```bash
 docker-compose up -d
@@ -85,7 +136,7 @@ docker-compose up -d
 
 This will start all services in detached mode.
 
-### 6. Verify Deployment
+### 7. Verify Deployment
 
 Check that all containers are running:
 
@@ -109,18 +160,38 @@ The setup uses two Docker networks:
 - `proxy_network`: For external communications between Nginx and web services
 - `db_network`: For internal communications between the backend and database
 
+## Backend Configuration Details
+
+The backend requires several important configuration settings:
+
+- **SRAM Authentication**: Configure the SRAM OAuth provider settings
+  - `ClientId`: Your application's ID in SRAM
+  - `RedirectUri`: Must match your API domain with the correct callback path
+  - `AllowedRedirectUris`: Where users are redirected after login (frontend domain)
+
+- **ORCID Authentication**: Configure the ORCID integration
+  - `ClientId`: Your registered ORCID application ID
+  - `RedirectUri`: API domain with correct callback path
+  - `AllowedRedirectUris`: Frontend redirect endpoint
+
+- **CORS Configuration**: Must include your frontend domain for proper cross-origin requests
+
+- **Feature Flags**: Enable/disable specific features
+  - `Swagger`: Enable for API documentation (development only)
+  - `SeedDatabase`: Enable only for initial database setup
+  - `DatabaseConnection`: Must be true for production
+  - `SRAMAuthentication`: Enable SRAM login
+  - `OrcidAuthentication`: Enable ORCID integration
+  - `ReverseProxy`: Should be true when behind nginx
+  - `HttpsRedirect`: Should be true for production
+
 ## Troubleshooting
 
 - If SSL certificates aren't being issued, check that your domains point to the server's IP address
 - For database connection issues, verify the database credentials are consistent
 - Check container logs with `docker-compose logs [service-name]`
-
-## Notes and Clarifications Needed
-
-- Are there any specific configuration requirements for the SRAM authentication?
-- What roles/permissions are needed for the SRAM integration?
-- Are there any backend environment variables that should be configured beyond those in the docker-compose file?
-- What is the expected database schema migration process?
+- If authentication fails, verify the client IDs and secrets match your registered applications
+- For CORS issues, ensure your frontend domain is properly listed in the backend configuration
 
 ## Maintenance
 
