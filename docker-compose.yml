@@ -1,84 +1,56 @@
 networks:
+  app_network:
   db_network:
-  proxy_network:
 
 services:
-  nginx-proxy:
-      image: nginxproxy/nginx-proxy
-      restart: always
-      volumes:
-          - html:/usr/share/nginx/html
-          - certs:/etc/nginx/certs:ro
-          - /var/run/docker.sock:/tmp/docker.sock:ro
-          - ./proxy_buffers.conf:/etc/nginx/conf.d/proxy_buffers.conf:ro
-          - ./conflux_proxy.conf:/etc/nginx/location.d/default.conf:ro
-      networks:
-        - proxy_network  # Attach to proxy network
-      ports:
-          - "80:80"
-          - "443:443"
-
-  nginx-proxy-acme:
-      image: nginxproxy/acme-companion
-      restart: always
-      volumes_from:
-          - nginx-proxy
-      volumes:
-          - certs:/etc/nginx/certs:rw
-          - acme:/etc/acme.sh
-          - /var/run/docker.sock:/var/run/docker.sock:ro
-      networks:
-        - proxy_network  # Attach to proxy network
-      environment:
-          DEFAULT_EMAIL: <EMAIL_ADDRESS>
-
   postgres:
-      image: postgres:17.3
-      restart: always
-      networks:
-        - db_network
-      environment:
-          POSTGRES_USER: <DB_USER>
-          POSTGRES_PASSWORD: <DB_PASSWORD>
-          POSTGRES_DB: <DB_NAME>
-      healthcheck:
-          test: [ "CMD", "pg_isready", "-q", "-d", "<DB_NAME>", "-U", "<DB_USER>" ]
-          interval: 10s
-          timeout: 5s
-          retries: 5
-      ports:
-          - "5432:5432"
+    image: postgres:17.3
+    restart: always
+    networks:
+      - db_network
+    environment:
+      POSTGRES_USER: <DB_USER>
+      POSTGRES_PASSWORD: <DB_PASSWORD>
+      POSTGRES_DB: <DB_NAME>
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "conflux", "-U", "conflux"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   conflux-web:
-      image: conflux-web:latest
-      restart: always
-      networks:
-        - proxy_network  # Attach to proxy network
-      environment:
-          VIRTUAL_HOST: <DOMAIN>
-          LETSENCRYPT_HOST: <DOMAIN>
+    image: conflux-web
+    restart: always
+    networks:
+      - app_network
+    ports:
+      - "127.0.0.1:8081:80"
 
   conflux-backend:
-      image: conflux-backend:latest
-      restart: always
-      networks:
-        - proxy_network  # Attach to proxy network
-        - db_network     # Attach to database network
-      environment:
-          VIRTUAL_HOST: <API_DOMAIN>
-          LETSENCRYPT_HOST: <API_DOMAIN>
-          DB_HOST: postgres
-          DB_NAME: <DB_NAME>
-          DB_USER: <DB_USER>
-          DB_PASSWORD: <DB_PASSWORD>
-          SRAM_CLIENT_SECRET: <SRAM_CLIENT_SECRET>
-          SRAM_SCIM_SECRET: <SRAM_SCIM_SECRET>
-          ORCID_CLIENT_SECRET: <ORCID_CLIENT_SECRET>
-      depends_on:
-          postgres:
-              condition: service_healthy
+    image: conflux-backend
+    restart: always
+    networks:
+      - app_network
+      - db_network
+    ports:
+      - "127.0.0.1:8082:80"
+    environment:
+      DB_HOST: <DB_HOST>
+      DB_NAME: <DB_NAME>
+      DB_USER: <DB_USER>
+      DB_PASSWORD: <DB_PASSWORD>
+      SRAM_CLIENT_SECRET: <SRAM_CLIENT_SECRET>
+      SRAM_SCIM_SECRET: <SRAM_SCIM_SECRET>
+      ORCID_CLIENT_SECRET: <ORCID_CLIENT_SECRET>
+      RAID_USERNAME: <RAID_USERNAME>
+      RAID_PASSWORD: <RAID_PASSWORD>
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
-    html:
-    certs:
-    acme:
+  postgres_data:
