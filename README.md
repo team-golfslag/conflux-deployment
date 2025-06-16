@@ -97,6 +97,8 @@ The backend service is configured using environment variables set in the `docker
     ORCID_CLIENT_SECRET=your_orcid_client_secret_here
     RAID_USERNAME=your_raid_service_account_username
     RAID_PASSWORD=your_raid_service_account_password
+    WEBARCHIVE_ACCESS_KEY=<WEBARCHIVE_ACCESS_KEY>
+    WEBARCHIVE_SECRET_KEY=<WEBARCHIVE_SECRET_KEY>
 
     # Backend Configuration Overrides
     # See the "Backend Configuration" section for more details.

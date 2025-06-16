@@ -48,6 +48,8 @@ services:
       ORCID_CLIENT_SECRET: <ORCID_CLIENT_SECRET>
       RAID_USERNAME: <RAID_USERNAME>
       RAID_PASSWORD: <RAID_PASSWORD>
+      WEBARCHIVE_ACCESS_KEY: <WEBARCHIVE_ACCESS_KEY>
+      WEBARCHIVE_SECRET_KEY: <WEBARCHIVE_SECRET_KEY>
     depends_on:
       postgres:
         condition: service_healthy
