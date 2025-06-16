@@ -4,7 +4,7 @@ networks:
 
 services:
   postgres:
-    image: postgres:17.3
+    image: pgvector/pgvector:pg17
     restart: always
     networks:
       - db_network
