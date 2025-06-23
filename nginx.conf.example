@@ -1,0 +1,230 @@
+# Example Nginx Configuration for Conflux Deployment
+# 
+# OPTION 1: Single Domain with Subpaths (Recommended for simpler setups)
+# Replace <DOMAIN> with your domain (e.g., example.com)
+# Frontend will be at: https://<DOMAIN>/
+# API will be at: https://<DOMAIN>/api/
+#
+# OPTION 2: Separate Domains/Subdomains  
+# Replace <WEB_UI_DOMAIN> and <API_DOMAIN> with your domains
+# Frontend: https://<WEB_UI_DOMAIN>/
+# API: https://<API_DOMAIN>/
+#
+# Choose ONE of the configurations below and remove/comment out the other
+
+# =============================================================================
+# OPTION 1: Single Domain with Subpaths (Simpler Setup)
+# =============================================================================
+
+# --- HTTP to HTTPS redirect for single domain ---
+server {
+    listen 80;
+    server_name <DOMAIN>;
+
+    # For Certbot ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS server for single domain with subpaths ---
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name <DOMAIN>;
+
+    # SSL configuration - Certbot will manage these lines
+    ssl_certificate /etc/letsencrypt/live/<DOMAIN>/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/<DOMAIN>/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Logging
+    access_log /var/log/nginx/conflux.access.log;
+    error_log /var/log/nginx/conflux.error.log;
+
+    # Proxy Buffers
+    proxy_buffer_size          128k;
+    proxy_buffers              4 256k;
+    proxy_busy_buffers_size    256k;
+
+    # Optional: Increase if your application handles large uploads
+    # client_max_body_size 100M;
+
+    # Proxy API requests to backend (must come before root location)
+    location /api/ {
+        proxy_pass http://127.0.0.1:8082/; # Note the trailing slash
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # Support for WebSockets if your API uses them
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
+    }
+
+    # Proxy all other requests to frontend
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # Support for WebSockets if needed
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
+    }
+
+    # Certbot ACME challenge location for HTTPS renewal
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+}
+
+# =============================================================================
+# OPTION 2: Separate Domains/Subdomains (More Complex Setup)
+# =============================================================================
+
+# --- HTTP to HTTPS redirect for frontend domain (Option 2) ---
+server {
+    listen 80;
+    server_name <WEB_UI_DOMAIN>;
+
+    # For Certbot ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTP to HTTPS redirect for API domain (Option 2) ---
+server {
+    listen 80;
+    server_name <API_DOMAIN>;
+
+    # For Certbot ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS server for frontend (Option 2) ---
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name <WEB_UI_DOMAIN>;
+
+    # SSL configuration - Certbot will manage these lines
+    # Ensure Certbot has run for both domains
+    ssl_certificate /etc/letsencrypt/live/<WEB_UI_DOMAIN>/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/<WEB_UI_DOMAIN>/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Logging
+    access_log /var/log/nginx/conflux-web.access.log;
+    error_log /var/log/nginx/conflux-web.error.log;
+
+    # Proxy Buffers
+    proxy_buffer_size          128k;
+    proxy_buffers              4 256k;
+    proxy_busy_buffers_size    256k;
+
+    # Optional: Increase if your application handles large uploads
+    # client_max_body_size 100M;
+
+    # Proxy to Conflux Web UI
+    location / {
+        proxy_pass http://127.0.0.1:8081; # Should point to conflux-web service
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # Support for WebSockets if needed
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
+    }
+
+    # Certbot ACME challenge location for HTTPS renewal
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+}
+
+# --- HTTPS server for API (Option 2) ---
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name <API_DOMAIN>;
+
+    # SSL configuration - Certbot will manage these lines
+    # May use the same certificate if it's a wildcard or SAN cert
+    ssl_certificate /etc/letsencrypt/live/<API_DOMAIN>/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/<API_DOMAIN>/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Logging - separate logs for API
+    access_log /var/log/nginx/conflux-api.access.log;
+    error_log /var/log/nginx/conflux-api.error.log;
+
+    # Proxy Buffers
+    proxy_buffer_size          128k;
+    proxy_buffers              4 256k;
+    proxy_busy_buffers_size    256k;
+
+    # Optional: Increase if your API handles large uploads
+    # client_max_body_size 100M;
+
+    # Proxy to Conflux Backend API
+    location / {
+        proxy_pass http://127.0.0.1:8082; # Should point to conflux-backend service
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # Support for WebSockets if your API uses them
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
+    }
+
+    # Certbot ACME challenge location for HTTPS renewal
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+}
